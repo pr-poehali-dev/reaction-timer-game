@@ -1,0 +1,18 @@
+{
+  "tests": [
+    {
+      "name": "Save click result",
+      "method": "POST",
+      "body": {
+        "player_name": "TestPlayer",
+        "clicks": 100,
+        "cps": 10.0,
+        "duration": 10
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true
+      }
+    }
+  ]
+}

@@ -1,4 +1,6 @@
 {
+  "save-click-result": "https://functions.poehali.dev/d2d66c13-c48a-48c4-936f-064e986c9d93",
+  "get-click-leaderboard": "https://functions.poehali.dev/528579c6-94bd-4ddb-af79-91ed85bdffcc",
   "get-leaderboard": "https://functions.poehali.dev/4851b3a8-ea61-4542-b21a-3a67a27f31ff",
   "save-result": "https://functions.poehali.dev/da504e53-a2a8-40cc-8b6a-7611aebd6031"
 }

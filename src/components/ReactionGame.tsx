@@ -31,6 +31,7 @@ export default function ReactionGame() {
   const [playerName, setPlayerName] = useState('Игрок');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [activeTab, setActiveTab] = useState('game');
+  const [gameMode, setGameMode] = useState<'reaction' | 'clicks'>('reaction');
   const [timeoutCount, setTimeoutCount] = useState(0);
   const [showSpecialMessage, setShowSpecialMessage] = useState(false);
   const [specialMessageText, setSpecialMessageText] = useState('');
@@ -394,7 +395,41 @@ export default function ReactionGame() {
           </TabsContent>
 
           <TabsContent value="modes" className="space-y-6">
-            <ClickSpeedGame />
+            <Card className="p-6 border-2 border-[#E5E7EB] mb-6">
+              <div className="flex items-center justify-center gap-4">
+                <Button
+                  onClick={() => setGameMode('reaction')}
+                  className={`px-8 py-4 font-bold text-lg ${
+                    gameMode === 'reaction'
+                      ? 'bg-[#10B981] hover:bg-[#059669] text-white'
+                      : 'bg-[#F9FAFB] hover:bg-[#E5E7EB] text-[#6B7280] border-2 border-[#E5E7EB]'
+                  }`}
+                >
+                  <Icon name="Zap" size={24} className="mr-2" />
+                  Тест реакции
+                </Button>
+                <Button
+                  onClick={() => setGameMode('clicks')}
+                  className={`px-8 py-4 font-bold text-lg ${
+                    gameMode === 'clicks'
+                      ? 'bg-[#3B82F6] hover:bg-[#2563EB] text-white'
+                      : 'bg-[#F9FAFB] hover:bg-[#E5E7EB] text-[#6B7280] border-2 border-[#E5E7EB]'
+                  }`}
+                >
+                  <Icon name="MousePointerClick" size={24} className="mr-2" />
+                  Скорость кликов
+                </Button>
+              </div>
+            </Card>
+
+            {gameMode === 'clicks' ? <ClickSpeedGame /> : (
+              <Card className="p-8 border-2 border-[#E5E7EB]">
+                <div className="text-center text-[#6B7280]">
+                  <Icon name="Zap" size={48} className="mx-auto mb-4 text-[#10B981]" />
+                  <p className="text-xl">Тест реакции находится на вкладке "Игра"</p>
+                </div>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="stats" className="space-y-6">

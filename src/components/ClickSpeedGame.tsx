@@ -12,7 +12,23 @@ interface ClickResult {
   timestamp: Date;
 }
 
+interface AchievementMessage {
+  text: string;
+  image: string;
+}
+
+interface LeaderboardEntry {
+  player_name: string;
+  clicks: number;
+  cps: number;
+  created_at: string;
+}
+
 const DURATIONS = [5, 10, 15, 30, 60];
+const GOOD_IMAGE = 'https://cdn.poehali.dev/projects/2abab238-5391-40ae-ab82-56d894a10964/files/c243b697-0530-4897-a4ab-193a0c154e79.jpg';
+const MUSCLE_IMAGE = 'https://cdn.poehali.dev/projects/2abab238-5391-40ae-ab82-56d894a10964/files/1e92adba-5c64-444f-a0e1-7b69470846f4.jpg';
+const SAVE_CLICK_URL = 'https://functions.poehali.dev/d2d66c13-c48a-48c4-936f-064e986c9d93';
+const GET_CLICK_LEADERBOARD_URL = 'https://functions.poehali.dev/528579c6-94bd-4ddb-af79-91ed85bdffcc';
 
 export default function ClickSpeedGame() {
   const [gameState, setGameState] = useState<GameState>('idle');
@@ -21,10 +37,49 @@ export default function ClickSpeedGame() {
   const [selectedDuration, setSelectedDuration] = useState(10);
   const [results, setResults] = useState<ClickResult[]>([]);
   const [currentCPS, setCurrentCPS] = useState(0);
+  const [showAchievement, setShowAchievement] = useState(false);
+  const [achievement, setAchievement] = useState<AchievementMessage | null>(null);
+  const [playerName, setPlayerName] = useState('Игрок');
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
   const clickCountRef = useRef<number>(0);
+
+  useEffect(() => {
+    fetchLeaderboard();
+  }, []);
+
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await fetch(GET_CLICK_LEADERBOARD_URL);
+      const data = await response.json();
+      setLeaderboard(data.leaderboard || []);
+    } catch (error) {
+      console.error('Failed to fetch click leaderboard:', error);
+    }
+  };
+
+  const saveResult = async (totalClicks: number, finalCPS: number, duration: number) => {
+    try {
+      await fetch(SAVE_CLICK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          player_name: playerName,
+          clicks: totalClicks,
+          cps: finalCPS,
+          duration: duration
+        })
+      });
+      fetchLeaderboard();
+    } catch (error) {
+      console.error('Failed to save click result:', error);
+    }
+  };
 
   useEffect(() => {
     if (gameState === 'playing' && timeLeft > 0) {
@@ -46,6 +101,10 @@ export default function ClickSpeedGame() {
   }, [gameState, timeLeft]);
 
   const startGame = () => {
+    if (!playerName.trim() || playerName.trim().toLowerCase() === 'игрок') {
+      alert('Введите своё имя, чтобы начать игру! 😉');
+      return;
+    }
     setGameState('playing');
     setClicks(0);
     setTimeLeft(selectedDuration);
@@ -65,6 +124,8 @@ export default function ClickSpeedGame() {
     setGameState('finished');
     const finalCPS = Math.round((clicks / selectedDuration) * 10) / 10;
     
+    checkAchievements(clicks, selectedDuration);
+    
     const newResult: ClickResult = {
       clicks,
       cps: finalCPS,
@@ -74,6 +135,25 @@ export default function ClickSpeedGame() {
     
     setResults(prev => [newResult, ...prev].slice(0, 10));
     setCurrentCPS(finalCPS);
+    saveResult(clicks, finalCPS, selectedDuration);
+  };
+
+  const checkAchievements = (totalClicks: number, duration: number) => {
+    if (duration === 10 && totalClicks >= 150) {
+      setAchievement({ text: 'НАКАЧАННЫЕ ПАЛЬЦЫ! 💪', image: MUSCLE_IMAGE });
+      setShowAchievement(true);
+    } else if (duration === 10 && totalClicks >= 100) {
+      setAchievement({ text: 'ХОРОШО! 👍', image: GOOD_IMAGE });
+      setShowAchievement(true);
+    } else if (duration === 5 && totalClicks >= 30) {
+      setAchievement({ text: '😲 😲 😲 НЕВЕРОЯТНО!', image: GOOD_IMAGE });
+      setShowAchievement(true);
+    }
+  };
+
+  const skipAchievement = () => {
+    setShowAchievement(false);
+    setAchievement(null);
   };
 
   const resetGame = () => {
@@ -82,6 +162,8 @@ export default function ClickSpeedGame() {
     setTimeLeft(selectedDuration);
     setCurrentCPS(0);
     clickCountRef.current = 0;
+    setShowAchievement(false);
+    setAchievement(null);
   };
 
   const getButtonColor = () => {
@@ -113,6 +195,29 @@ export default function ClickSpeedGame() {
 
           {gameState === 'idle' && (
             <div className="space-y-4">
+              <Card className="p-4 bg-[#F9FAFB] border-2 border-[#E5E7EB]">
+                <div className="flex items-center gap-3 mb-3">
+                  <Icon name="User" className="text-[#10B981]" size={20} />
+                  <h3 className="text-sm font-medium text-[#6B7280] uppercase">Имя игрока</h3>
+                </div>
+                <input
+                  type="text"
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value)}
+                  className={`w-full px-4 py-2 rounded-lg text-lg border-2 ${
+                    (!playerName.trim() || playerName.trim().toLowerCase() === 'игрок')
+                      ? 'border-[#EF4444]'
+                      : 'border-[#10B981]'
+                  }`}
+                  placeholder="Введите ваше имя (не 'Игрок')"
+                />
+                {(!playerName.trim() || playerName.trim().toLowerCase() === 'игрок') && (
+                  <p className="text-[#EF4444] text-sm mt-2 font-medium">
+                    ⚠️ Введите уникальное имя для начала игры
+                  </p>
+                )}
+              </Card>
+              
               <p className="text-[#6B7280] font-medium">Выбери длительность теста:</p>
               <div className="flex gap-3 justify-center flex-wrap">
                 {DURATIONS.map(duration => (
@@ -173,7 +278,26 @@ export default function ClickSpeedGame() {
             {getButtonText()}
           </Button>
 
-          {gameState === 'finished' && (
+          {showAchievement && achievement && (
+            <Card className="p-8 bg-gradient-to-br from-[#FCD34D] to-[#F59E0B] border-4 border-[#F59E0B]">
+              <div className="text-center space-y-4">
+                <img 
+                  src={achievement.image} 
+                  alt="Achievement" 
+                  className="w-64 h-64 mx-auto rounded-lg object-cover"
+                />
+                <h2 className="text-4xl font-bold text-[#1F2937]">{achievement.text}</h2>
+                <Button
+                  onClick={skipAchievement}
+                  className="bg-[#1F2937] hover:bg-[#374151] text-white font-bold text-lg px-8 py-4"
+                >
+                  Продолжить →
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {gameState === 'finished' && !showAchievement && (
             <div className="space-y-4 py-6">
               <Card className="p-6 bg-[#F0FDF4] border-2 border-[#10B981]">
                 <h3 className="text-2xl font-bold text-[#1F2937] mb-4">Результат</h3>
@@ -257,6 +381,69 @@ export default function ClickSpeedGame() {
           </Card>
         </div>
       )}
+
+      <Card className="p-6 border-2 border-[#E5E7EB]">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <Icon name="Trophy" className="text-[#F59E0B]" size={28} />
+            <h3 className="text-2xl font-bold text-[#1F2937]">Таблица лидеров</h3>
+          </div>
+          <Button
+            onClick={() => setShowLeaderboard(!showLeaderboard)}
+            className="bg-[#3B82F6] hover:bg-[#2563EB] text-white"
+          >
+            {showLeaderboard ? 'Скрыть' : 'Показать'}
+          </Button>
+        </div>
+
+        {showLeaderboard && (
+          <div className="space-y-3">
+            {leaderboard.length === 0 ? (
+              <p className="text-[#6B7280] text-center py-8">Пока нет результатов</p>
+            ) : (
+              leaderboard.map((entry, index) => (
+                <div
+                  key={index}
+                  className={`flex items-center justify-between p-4 rounded-lg ${
+                    index === 0
+                      ? 'bg-gradient-to-r from-[#FCD34D] to-[#F59E0B] border-2 border-[#F59E0B]'
+                      : index === 1
+                      ? 'bg-gradient-to-r from-[#D1D5DB] to-[#9CA3AF] border-2 border-[#9CA3AF]'
+                      : index === 2
+                      ? 'bg-gradient-to-r from-[#FCA5A5] to-[#EF4444] border-2 border-[#EF4444]'
+                      : 'bg-[#F9FAFB]'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <span
+                      className={`font-['Roboto_Mono'] text-3xl font-bold ${
+                        index < 3 ? 'text-white' : 'text-[#6B7280]'
+                      }`}
+                    >
+                      #{index + 1}
+                    </span>
+                    <div>
+                      <p className={`font-bold text-lg ${index < 3 ? 'text-white' : 'text-[#1F2937]'}`}>
+                        {entry.player_name}
+                      </p>
+                      <p className={`text-sm ${index < 3 ? 'text-white/80' : 'text-[#6B7280]'}`}>
+                        {entry.clicks} кликов
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`font-['Roboto_Mono'] text-3xl font-bold ${
+                      index < 3 ? 'text-white' : 'text-[#3B82F6]'
+                    }`}
+                  >
+                    {entry.cps.toFixed(1)} CPS
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </Card>
 
       <Card className="p-6 border-2 border-[#E5E7EB] bg-[#F9FAFB]">
         <div className="flex items-center gap-3 mb-3">
