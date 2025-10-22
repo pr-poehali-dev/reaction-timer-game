@@ -91,6 +91,10 @@ export default function ReactionGame() {
 
   const handleButtonClick = () => {
     if (gameState === 'waiting') {
+      if (!playerName.trim() || playerName.trim().toLowerCase() === 'игрок') {
+        alert('Введите своё имя, чтобы начать игру! 😉');
+        return;
+      }
       setGameState('ready');
       setShowSpecialMessage(false);
       const delay = Math.random() * 4000 + 1000;
@@ -241,9 +245,14 @@ export default function ReactionGame() {
               <Input
                 value={playerName}
                 onChange={(e) => setPlayerName(e.target.value)}
-                className="text-lg"
-                placeholder="Введите ваше имя"
+                className={`text-lg ${(!playerName.trim() || playerName.trim().toLowerCase() === 'игрок') ? 'border-2 border-[#EF4444]' : 'border-2 border-[#10B981]'}`}
+                placeholder="Введите ваше имя (не 'Игрок')"
               />
+              {(!playerName.trim() || playerName.trim().toLowerCase() === 'игрок') && (
+                <p className="text-[#EF4444] text-sm mt-2 font-medium">
+                  ⚠️ Введите уникальное имя для начала игры
+                </p>
+              )}
             </Card>
 
             <div className="grid md:grid-cols-3 gap-6">
