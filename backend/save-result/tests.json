@@ -1,0 +1,14 @@
+{
+  "tests": [
+    {
+      "name": "Save game result",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "player_name": "Test Player",
+        "reaction_time": 250
+      },
+      "expectedStatus": 200
+    }
+  ]
+}
