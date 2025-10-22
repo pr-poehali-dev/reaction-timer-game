@@ -50,9 +50,13 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     conn = psycopg2.connect(database_url)
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     
-    cursor.execute(
-        "SELECT player_name, reaction_time, created_at FROM game_results ORDER BY reaction_time ASC LIMIT 10"
-    )
+    cursor.execute("""
+        SELECT player_name, MIN(reaction_time) as reaction_time, MAX(created_at) as created_at 
+        FROM game_results 
+        GROUP BY player_name 
+        ORDER BY reaction_time ASC 
+        LIMIT 10
+    """)
     results = cursor.fetchall()
     
     cursor.close()
