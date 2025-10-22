@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import Icon from '@/components/ui/icon';
+import ClickSpeedGame from '@/components/ClickSpeedGame';
 
 type GameState = 'waiting' | 'ready' | 'green' | 'clicked' | 'failed' | 'timeout';
 
@@ -393,81 +394,7 @@ export default function ReactionGame() {
           </TabsContent>
 
           <TabsContent value="modes" className="space-y-6">
-            <Card className="p-8 border-2 border-[#E5E7EB]">
-              <div className="text-center space-y-6">
-                <div className="flex items-center justify-center gap-3 mb-6">
-                  <Icon name="Gamepad2" className="text-[#10B981]" size={36} />
-                  <h2 className="text-3xl font-bold text-[#1F2937]">Режимы игры</h2>
-                </div>
-                
-                <div className="grid md:grid-cols-2 gap-6">
-                  <Card className="p-6 border-2 border-[#10B981] bg-[#F0FDF4] hover:shadow-lg transition-shadow cursor-pointer">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 justify-center">
-                        <Icon name="Zap" className="text-[#10B981]" size={28} />
-                        <h3 className="text-xl font-bold text-[#1F2937]">Тест реакции</h3>
-                      </div>
-                      <p className="text-[#6B7280] text-sm">Текущий режим: проверь скорость своей реакции</p>
-                      <div className="inline-block px-3 py-1 bg-[#10B981] text-white text-xs font-bold rounded-full">
-                        АКТИВЕН
-                      </div>
-                    </div>
-                  </Card>
-
-                  <Card className="p-6 border-2 border-[#E5E7EB] hover:shadow-lg transition-shadow cursor-pointer relative overflow-hidden">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 justify-center">
-                        <Icon name="MousePointerClick" className="text-[#6B7280]" size={28} />
-                        <h3 className="text-xl font-bold text-[#1F2937]">Скорость кликов</h3>
-                      </div>
-                      <p className="text-[#6B7280] text-sm">Сколько раз сможешь кликнуть за 10 секунд?</p>
-                      <div className="inline-block px-3 py-1 bg-[#FCD34D] text-[#1F2937] text-xs font-bold rounded-full">
-                        СКОРО
-                      </div>
-                    </div>
-                    <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center">
-                      <span className="text-4xl">🚧</span>
-                    </div>
-                  </Card>
-
-                  <Card className="p-6 border-2 border-[#E5E7EB] hover:shadow-lg transition-shadow cursor-pointer relative overflow-hidden">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 justify-center">
-                        <Icon name="Target" className="text-[#6B7280]" size={28} />
-                        <h3 className="text-xl font-bold text-[#1F2937]">Точность прицела</h3>
-                      </div>
-                      <p className="text-[#6B7280] text-sm">Попади в движущиеся цели как можно быстрее</p>
-                      <div className="inline-block px-3 py-1 bg-[#FCD34D] text-[#1F2937] text-xs font-bold rounded-full">
-                        СКОРО
-                      </div>
-                    </div>
-                    <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center">
-                      <span className="text-4xl">🚧</span>
-                    </div>
-                  </Card>
-
-                  <Card className="p-6 border-2 border-[#E5E7EB] hover:shadow-lg transition-shadow cursor-pointer relative overflow-hidden">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 justify-center">
-                        <Icon name="Brain" className="text-[#6B7280]" size={28} />
-                        <h3 className="text-xl font-bold text-[#1F2937]">Память</h3>
-                      </div>
-                      <p className="text-[#6B7280] text-sm">Запомни последовательность и повтори её</p>
-                      <div className="inline-block px-3 py-1 bg-[#FCD34D] text-[#1F2937] text-xs font-bold rounded-full">
-                        СКОРО
-                      </div>
-                    </div>
-                    <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center">
-                      <span className="text-4xl">🚧</span>
-                    </div>
-                  </Card>
-                </div>
-
-                <p className="text-[#6B7280] text-sm mt-6">
-                  💡 Больше режимов добавляются! Следи за обновлениями
-                </p>
-              </div>
-            </Card>
+            <ClickSpeedGame />
           </TabsContent>
 
           <TabsContent value="stats" className="space-y-6">
