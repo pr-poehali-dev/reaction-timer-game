@@ -125,8 +125,8 @@ export default function ReactionGame() {
       setReactionTime(finalTime);
       setRunning(false);
       
-      if (finalTime >= 4990 && finalTime <= 5000) {
-        setSpecialMessageText('Близко к поражению... как тебе вообще это удалось? 😱');
+      if (finalTime >= 4900 && finalTime <= 4999) {
+        setSpecialMessageText('Близко к поражению... как тебе вообще это удалось? Ты нас испытываешь? Или просто специально пытаешься нарушить правила? 🤨');
         setShowSpecialMessage(true);
       } else {
         setShowSpecialMessage(false);
@@ -142,10 +142,12 @@ export default function ReactionGame() {
       setResults(prev => [newResult, ...prev].slice(0, 10));
       saveResult(finalTime);
 
+      const displayTime = (finalTime >= 4900 && finalTime <= 4999) ? 6000 : 3000;
       setTimeout(() => {
         setGameState('waiting');
         setReactionTime(0);
-      }, 3000);
+        setShowSpecialMessage(false);
+      }, displayTime);
     } else if (gameState === 'timeout') {
       setShowSpecialMessage(false);
       setGameState('waiting');
