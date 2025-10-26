@@ -395,36 +395,43 @@ export default function ReactionGame() {
           </TabsContent>
 
           <TabsContent value="modes" className="space-y-6">
-            <Card className="p-6 border-2 border-[#E5E7EB] mb-6">
-              <div className="flex items-center justify-center gap-4">
-                <Button
-                  onClick={() => setGameMode('reaction')}
-                  className={`px-8 py-4 font-bold text-lg ${
-                    gameMode === 'reaction'
-                      ? 'bg-[#10B981] hover:bg-[#059669] text-white'
-                      : 'bg-[#F9FAFB] hover:bg-[#E5E7EB] text-[#6B7280] border-2 border-[#E5E7EB]'
-                  }`}
-                >
-                  <Icon name="Zap" size={24} className="mr-2" />
-                  Тест реакции
-                </Button>
-                <Button
-                  onClick={() => setGameMode('clicks')}
-                  className={`px-8 py-4 font-bold text-lg ${
-                    gameMode === 'clicks'
-                      ? 'bg-[#3B82F6] hover:bg-[#2563EB] text-white'
-                      : 'bg-[#F9FAFB] hover:bg-[#E5E7EB] text-[#6B7280] border-2 border-[#E5E7EB]'
-                  }`}
-                >
-                  <Icon name="MousePointerClick" size={24} className="mr-2" />
-                  Скорость кликов
-                </Button>
-              </div>
-            </Card>
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card 
+                className={`p-8 border-2 cursor-pointer transition-all ${
+                  gameMode === 'reaction'
+                    ? 'border-[#10B981] bg-[#F0FDF4] shadow-lg'
+                    : 'border-[#E5E7EB] hover:border-[#10B981] hover:shadow-md'
+                }`}
+                onClick={() => setGameMode('reaction')}
+              >
+                <div className="flex flex-col items-center gap-4 text-center">
+                  <Icon name="Zap" size={64} className="text-[#10B981]" />
+                  <h3 className="text-2xl font-bold text-[#1F2937]">Тест реакции</h3>
+                  <p className="text-[#6B7280]">
+                    Нажми на кнопку, как только она станет зелёной
+                  </p>
+                </div>
+              </Card>
 
-            {gameMode === 'clicks' ? (
-              <ClickSpeedGame />
-            ) : (
+              <Card 
+                className={`p-8 border-2 cursor-pointer transition-all ${
+                  gameMode === 'clicks'
+                    ? 'border-[#3B82F6] bg-[#EFF6FF] shadow-lg'
+                    : 'border-[#E5E7EB] hover:border-[#3B82F6] hover:shadow-md'
+                }`}
+                onClick={() => setGameMode('clicks')}
+              >
+                <div className="flex flex-col items-center gap-4 text-center">
+                  <Icon name="MousePointerClick" size={64} className="text-[#3B82F6]" />
+                  <h3 className="text-2xl font-bold text-[#1F2937]">Скорость кликов</h3>
+                  <p className="text-[#6B7280]">
+                    Нажми на кнопку максимальное количество раз за время
+                  </p>
+                </div>
+              </Card>
+            </div>
+
+            {gameMode === 'reaction' && (
               <>
                 <Card className="p-6 border-2 border-[#E5E7EB]">
                   <div className="flex items-center gap-3 mb-4">
@@ -531,6 +538,8 @@ export default function ReactionGame() {
                 </Card>
               </>
             )}
+
+            {gameMode === 'clicks' && <ClickSpeedGame />}
           </TabsContent>
 
           <TabsContent value="stats" className="space-y-6">
