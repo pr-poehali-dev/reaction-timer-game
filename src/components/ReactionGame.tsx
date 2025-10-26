@@ -19,6 +19,13 @@ interface LeaderboardEntry {
   created_at: string;
 }
 
+interface ClickLeaderboardEntry {
+  player_name: string;
+  clicks: number;
+  cps: number;
+  created_at: string;
+}
+
 const SAVE_RESULT_URL = 'https://functions.poehali.dev/da504e53-a2a8-40cc-8b6a-7611aebd6031';
 const GET_LEADERBOARD_URL = 'https://functions.poehali.dev/4851b3a8-ea61-4542-b21a-3a67a27f31ff';
 const FACEPALM_IMAGE = 'https://cdn.poehali.dev/projects/2abab238-5391-40ae-ab82-56d894a10964/files/fec0c034-a3d5-4c8f-a51f-f1c047ac3957.jpg';
@@ -30,7 +37,9 @@ export default function ReactionGame() {
   const [results, setResults] = useState<GameResult[]>([]);
   const [playerName, setPlayerName] = useState('Игрок');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [clickLeaderboard, setClickLeaderboard] = useState<ClickLeaderboardEntry[]>([]);
   const [activeTab, setActiveTab] = useState('modes');
+  const [leaderboardMode, setLeaderboardMode] = useState<'reaction' | 'clicks'>('reaction');
   const [timeoutCount, setTimeoutCount] = useState(0);
   const [showSpecialMessage, setShowSpecialMessage] = useState(false);
   const [specialMessageText, setSpecialMessageText] = useState('');
@@ -43,7 +52,18 @@ export default function ReactionGame() {
 
   useEffect(() => {
     fetchLeaderboard();
+    fetchClickLeaderboard();
   }, []);
+
+  const fetchClickLeaderboard = async () => {
+    try {
+      const response = await fetch('https://functions.poehali.dev/528579c6-94bd-4ddb-af79-91ed85bdffcc');
+      const data = await response.json();
+      setClickLeaderboard(data.leaderboard || []);
+    } catch (error) {
+      console.error('Failed to fetch click leaderboard:', error);
+    }
+  };
 
   useEffect(() => {
     if (running && gameState === 'green') {
@@ -231,12 +251,11 @@ export default function ReactionGame() {
         </header>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="modes">Тест реакции</TabsTrigger>
             <TabsTrigger value="clicks">Скорость кликов</TabsTrigger>
             <TabsTrigger value="leaderboard">Лидеры</TabsTrigger>
             <TabsTrigger value="stats">Статистика</TabsTrigger>
-            <TabsTrigger value="clicks-stats">Результаты кликов</TabsTrigger>
             <TabsTrigger value="rules">Правила</TabsTrigger>
           </TabsList>
 
@@ -347,51 +366,137 @@ export default function ReactionGame() {
           </TabsContent>
 
           <TabsContent value="leaderboard" className="space-y-6">
-            <Card className="p-6 border-2 border-[#E5E7EB]">
-              <div className="flex items-center gap-3 mb-6">
-                <Icon name="Trophy" className="text-[#EF4444]" size={32} />
-                <h3 className="text-3xl font-bold text-[#1F2937]">
-                  Таблица лидеров (реакция)
-                </h3>
+            <Card className="p-6 border-2 border-[#E5E7EB] mb-6">
+              <div className="flex items-center justify-center gap-4">
+                <Button
+                  onClick={() => setLeaderboardMode('reaction')}
+                  className={`px-8 py-4 font-bold text-lg ${
+                    leaderboardMode === 'reaction'
+                      ? 'bg-[#10B981] hover:bg-[#059669] text-white'
+                      : 'bg-[#F9FAFB] hover:bg-[#E5E7EB] text-[#6B7280] border-2 border-[#E5E7EB]'
+                  }`}
+                >
+                  <Icon name="Zap" size={24} className="mr-2" />
+                  Тест реакции
+                </Button>
+                <Button
+                  onClick={() => setLeaderboardMode('clicks')}
+                  className={`px-8 py-4 font-bold text-lg ${
+                    leaderboardMode === 'clicks'
+                      ? 'bg-[#3B82F6] hover:bg-[#2563EB] text-white'
+                      : 'bg-[#F9FAFB] hover:bg-[#E5E7EB] text-[#6B7280] border-2 border-[#E5E7EB]'
+                  }`}
+                >
+                  <Icon name="MousePointerClick" size={24} className="mr-2" />
+                  Скорость кликов
+                </Button>
               </div>
-              
-              {leaderboard.length === 0 ? (
-                <p className="text-[#6B7280] text-center py-12 text-lg">
-                  Пока нет результатов. Стань первым!
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {leaderboard.map((entry, index) => (
-                    <div
-                      key={index}
-                      className={`flex justify-between items-center p-5 rounded-lg ${
-                        index === 0 ? 'bg-[#FEF3C7] border-2 border-[#F59E0B]' :
-                        index === 1 ? 'bg-[#E5E7EB] border-2 border-[#9CA3AF]' :
-                        index === 2 ? 'bg-[#FED7AA] border-2 border-[#F97316]' :
-                        'bg-[#F9FAFB]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <span className="text-3xl font-bold text-[#1F2937] w-12">
-                          #{index + 1}
-                        </span>
-                        <div>
-                          <p className="font-semibold text-xl text-[#1F2937]">
-                            {entry.player_name}
-                          </p>
-                          <p className="text-sm text-[#6B7280]">
-                            {new Date(entry.created_at).toLocaleString('ru-RU')}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="font-['Roboto_Mono'] text-3xl font-bold text-[#10B981]">
-                        {entry.reaction_time} мс
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </Card>
+
+            {leaderboardMode === 'reaction' ? (
+              <Card className="p-6 border-2 border-[#E5E7EB]">
+                <div className="flex items-center gap-3 mb-6">
+                  <Icon name="Trophy" className="text-[#EF4444]" size={32} />
+                  <h3 className="text-3xl font-bold text-[#1F2937]">
+                    Таблица лидеров (реакция)
+                  </h3>
+                </div>
+                
+                {leaderboard.length === 0 ? (
+                  <p className="text-[#6B7280] text-center py-12 text-lg">
+                    Пока нет результатов. Стань первым!
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {leaderboard.map((entry, index) => (
+                      <div
+                        key={index}
+                        className={`flex justify-between items-center p-5 rounded-lg ${
+                          index === 0 ? 'bg-[#FEF3C7] border-2 border-[#F59E0B]' :
+                          index === 1 ? 'bg-[#E5E7EB] border-2 border-[#9CA3AF]' :
+                          index === 2 ? 'bg-[#FED7AA] border-2 border-[#F97316]' :
+                          'bg-[#F9FAFB]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <span className="text-3xl font-bold text-[#1F2937] w-12">
+                            #{index + 1}
+                          </span>
+                          <div>
+                            <p className="font-semibold text-xl text-[#1F2937]">
+                              {entry.player_name}
+                            </p>
+                            <p className="text-sm text-[#6B7280]">
+                              {new Date(entry.created_at).toLocaleString('ru-RU')}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="font-['Roboto_Mono'] text-3xl font-bold text-[#10B981]">
+                          {entry.reaction_time} мс
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            ) : (
+              <Card className="p-6 border-2 border-[#E5E7EB]">
+                <div className="flex items-center gap-3 mb-6">
+                  <Icon name="Trophy" className="text-[#F59E0B]" size={32} />
+                  <h3 className="text-3xl font-bold text-[#1F2937]">
+                    Таблица лидеров (клики)
+                  </h3>
+                </div>
+                
+                {clickLeaderboard.length === 0 ? (
+                  <p className="text-[#6B7280] text-center py-12 text-lg">
+                    Пока нет результатов. Стань первым!
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {clickLeaderboard.map((entry, index) => (
+                      <div
+                        key={index}
+                        className={`flex items-center justify-between p-4 rounded-lg ${
+                          index === 0
+                            ? 'bg-gradient-to-r from-[#FCD34D] to-[#F59E0B] border-2 border-[#F59E0B]'
+                            : index === 1
+                            ? 'bg-gradient-to-r from-[#D1D5DB] to-[#9CA3AF] border-2 border-[#9CA3AF]'
+                            : index === 2
+                            ? 'bg-gradient-to-r from-[#FCA5A5] to-[#EF4444] border-2 border-[#EF4444]'
+                            : 'bg-[#F9FAFB]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <span
+                            className={`font-['Roboto_Mono'] text-3xl font-bold ${
+                              index < 3 ? 'text-white' : 'text-[#6B7280]'
+                            }`}
+                          >
+                            #{index + 1}
+                          </span>
+                          <div>
+                            <p className={`font-bold text-lg ${index < 3 ? 'text-white' : 'text-[#1F2937]'}`}>
+                              {entry.player_name}
+                            </p>
+                            <p className={`text-sm ${index < 3 ? 'text-white/80' : 'text-[#6B7280]'}`}>
+                              {entry.clicks} кликов
+                            </p>
+                          </div>
+                        </div>
+                        <span
+                          className={`font-['Roboto_Mono'] text-3xl font-bold ${
+                            index < 3 ? 'text-white' : 'text-[#3B82F6]'
+                          }`}
+                        >
+                          {entry.cps.toFixed(1)} CPS
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="clicks" className="space-y-6">
@@ -460,10 +565,6 @@ export default function ReactionGame() {
                 )}
               </Card>
             </div>
-          </TabsContent>
-
-          <TabsContent value="clicks-stats" className="space-y-6">
-            <ClickSpeedGame showStatsOnly={true} />
           </TabsContent>
 
           <TabsContent value="rules" className="space-y-6">

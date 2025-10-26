@@ -45,26 +45,10 @@ export default function ClickSpeedGame({ showStatsOnly = false }: ClickSpeedGame
   const [showAchievement, setShowAchievement] = useState(false);
   const [achievement, setAchievement] = useState<AchievementMessage | null>(null);
   const [playerName, setPlayerName] = useState('Игрок');
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
   const clickCountRef = useRef<number>(0);
-
-  useEffect(() => {
-    fetchLeaderboard();
-  }, []);
-
-  const fetchLeaderboard = async () => {
-    try {
-      const response = await fetch(GET_CLICK_LEADERBOARD_URL);
-      const data = await response.json();
-      setLeaderboard(data.leaderboard || []);
-    } catch (error) {
-      console.error('Failed to fetch click leaderboard:', error);
-    }
-  };
 
   const saveResult = async (totalClicks: number, finalCPS: number, duration: number) => {
     try {
@@ -80,7 +64,6 @@ export default function ClickSpeedGame({ showStatsOnly = false }: ClickSpeedGame
           duration: duration
         })
       });
-      fetchLeaderboard();
     } catch (error) {
       console.error('Failed to save click result:', error);
     }
@@ -251,69 +234,6 @@ export default function ClickSpeedGame({ showStatsOnly = false }: ClickSpeedGame
             </Card>
           </div>
         )}
-
-        <Card className="p-6 border-2 border-[#E5E7EB]">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Icon name="Trophy" className="text-[#F59E0B]" size={28} />
-              <h3 className="text-2xl font-bold text-[#1F2937]">Таблица лидеров (клики)</h3>
-            </div>
-            <Button
-              onClick={() => setShowLeaderboard(!showLeaderboard)}
-              className="bg-[#3B82F6] hover:bg-[#2563EB] text-white"
-            >
-              {showLeaderboard ? 'Скрыть' : 'Показать'}
-            </Button>
-          </div>
-
-          {showLeaderboard && (
-            <div className="space-y-3">
-              {leaderboard.length === 0 ? (
-                <p className="text-[#6B7280] text-center py-8">Пока нет результатов</p>
-              ) : (
-                leaderboard.map((entry, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center justify-between p-4 rounded-lg ${
-                      index === 0
-                        ? 'bg-gradient-to-r from-[#FCD34D] to-[#F59E0B] border-2 border-[#F59E0B]'
-                        : index === 1
-                        ? 'bg-gradient-to-r from-[#D1D5DB] to-[#9CA3AF] border-2 border-[#9CA3AF]'
-                        : index === 2
-                        ? 'bg-gradient-to-r from-[#FCA5A5] to-[#EF4444] border-2 border-[#EF4444]'
-                        : 'bg-[#F9FAFB]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <span
-                        className={`font-['Roboto_Mono'] text-3xl font-bold ${
-                          index < 3 ? 'text-white' : 'text-[#6B7280]'
-                        }`}
-                      >
-                        #{index + 1}
-                      </span>
-                      <div>
-                        <p className={`font-bold text-lg ${index < 3 ? 'text-white' : 'text-[#1F2937]'}`}>
-                          {entry.player_name}
-                        </p>
-                        <p className={`text-sm ${index < 3 ? 'text-white/80' : 'text-[#6B7280]'}`}>
-                          {entry.clicks} кликов
-                        </p>
-                      </div>
-                    </div>
-                    <span
-                      className={`font-['Roboto_Mono'] text-3xl font-bold ${
-                        index < 3 ? 'text-white' : 'text-[#3B82F6]'
-                      }`}
-                    >
-                      {entry.cps.toFixed(1)} CPS
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-        </Card>
       </div>
     );
   }
