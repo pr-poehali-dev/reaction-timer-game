@@ -30,7 +30,11 @@ const MUSCLE_IMAGE = 'https://cdn.poehali.dev/projects/2abab238-5391-40ae-ab82-5
 const SAVE_CLICK_URL = 'https://functions.poehali.dev/d2d66c13-c48a-48c4-936f-064e986c9d93';
 const GET_CLICK_LEADERBOARD_URL = 'https://functions.poehali.dev/528579c6-94bd-4ddb-af79-91ed85bdffcc';
 
-export default function ClickSpeedGame() {
+interface ClickSpeedGameProps {
+  showStatsOnly?: boolean;
+}
+
+export default function ClickSpeedGame({ showStatsOnly = false }: ClickSpeedGameProps) {
   const [gameState, setGameState] = useState<GameState>('idle');
   const [clicks, setClicks] = useState(0);
   const [timeLeft, setTimeLeft] = useState(10);
@@ -182,6 +186,133 @@ export default function ClickSpeedGame() {
   const avgResult = results.length > 0 
     ? Math.round(results.reduce((sum, r) => sum + r.cps, 0) / results.length * 10) / 10
     : null;
+
+  if (showStatsOnly) {
+    return (
+      <div className="space-y-6">
+        {results.length > 0 && (
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card className="p-6 border-2 border-[#E5E7EB]">
+              <div className="flex items-center gap-3 mb-4">
+                <Icon name="BarChart3" className="text-[#10B981]" size={28} />
+                <h3 className="text-2xl font-bold text-[#1F2937]">Статистика кликов</h3>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-4 bg-[#F9FAFB] rounded-lg">
+                  <span className="text-[#6B7280]">Лучший результат:</span>
+                  <span className="font-['Roboto_Mono'] text-2xl font-bold text-[#10B981]">
+                    {bestResult?.toFixed(1)} CPS
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-4 bg-[#F9FAFB] rounded-lg">
+                  <span className="text-[#6B7280]">Средний результат:</span>
+                  <span className="font-['Roboto_Mono'] text-2xl font-bold text-[#1F2937]">
+                    {avgResult?.toFixed(1)} CPS
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-4 bg-[#F9FAFB] rounded-lg">
+                  <span className="text-[#6B7280]">Попыток:</span>
+                  <span className="font-['Roboto_Mono'] text-2xl font-bold text-[#1F2937]">
+                    {results.length}
+                  </span>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6 border-2 border-[#E5E7EB]">
+              <div className="flex items-center gap-3 mb-4">
+                <Icon name="History" className="text-[#6B7280]" size={28} />
+                <h3 className="text-2xl font-bold text-[#1F2937]">История</h3>
+              </div>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {results.map((result, index) => (
+                  <div
+                    key={index}
+                    className="flex justify-between items-center p-4 bg-[#F9FAFB] rounded-lg"
+                  >
+                    <div>
+                      <p className="font-['Roboto_Mono'] text-lg font-bold text-[#1F2937]">
+                        {result.clicks} кликов ({result.duration}с)
+                      </p>
+                      <p className="text-sm text-[#6B7280]">
+                        {result.timestamp.toLocaleTimeString('ru-RU')}
+                      </p>
+                    </div>
+                    <span className="font-['Roboto_Mono'] text-2xl font-bold text-[#3B82F6]">
+                      {result.cps.toFixed(1)} CPS
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        <Card className="p-6 border-2 border-[#E5E7EB]">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Icon name="Trophy" className="text-[#F59E0B]" size={28} />
+              <h3 className="text-2xl font-bold text-[#1F2937]">Таблица лидеров (клики)</h3>
+            </div>
+            <Button
+              onClick={() => setShowLeaderboard(!showLeaderboard)}
+              className="bg-[#3B82F6] hover:bg-[#2563EB] text-white"
+            >
+              {showLeaderboard ? 'Скрыть' : 'Показать'}
+            </Button>
+          </div>
+
+          {showLeaderboard && (
+            <div className="space-y-3">
+              {leaderboard.length === 0 ? (
+                <p className="text-[#6B7280] text-center py-8">Пока нет результатов</p>
+              ) : (
+                leaderboard.map((entry, index) => (
+                  <div
+                    key={index}
+                    className={`flex items-center justify-between p-4 rounded-lg ${
+                      index === 0
+                        ? 'bg-gradient-to-r from-[#FCD34D] to-[#F59E0B] border-2 border-[#F59E0B]'
+                        : index === 1
+                        ? 'bg-gradient-to-r from-[#D1D5DB] to-[#9CA3AF] border-2 border-[#9CA3AF]'
+                        : index === 2
+                        ? 'bg-gradient-to-r from-[#FCA5A5] to-[#EF4444] border-2 border-[#EF4444]'
+                        : 'bg-[#F9FAFB]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <span
+                        className={`font-['Roboto_Mono'] text-3xl font-bold ${
+                          index < 3 ? 'text-white' : 'text-[#6B7280]'
+                        }`}
+                      >
+                        #{index + 1}
+                      </span>
+                      <div>
+                        <p className={`font-bold text-lg ${index < 3 ? 'text-white' : 'text-[#1F2937]'}`}>
+                          {entry.player_name}
+                        </p>
+                        <p className={`text-sm ${index < 3 ? 'text-white/80' : 'text-[#6B7280]'}`}>
+                          {entry.clicks} кликов
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={`font-['Roboto_Mono'] text-3xl font-bold ${
+                        index < 3 ? 'text-white' : 'text-[#3B82F6]'
+                      }`}
+                    >
+                      {entry.cps.toFixed(1)} CPS
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

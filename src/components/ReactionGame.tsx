@@ -233,14 +233,14 @@ export default function ReactionGame() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="game">Игра</TabsTrigger>
             <TabsTrigger value="modes">Режимы</TabsTrigger>
             <TabsTrigger value="leaderboard">Лидеры</TabsTrigger>
             <TabsTrigger value="stats">Статистика</TabsTrigger>
+            <TabsTrigger value="clicks-stats">Результаты кликов</TabsTrigger>
             <TabsTrigger value="rules">Правила</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="game" className="space-y-6">
+          <TabsContent value="modes" className="space-y-6">
             <Card className="p-6 border-2 border-[#E5E7EB]">
               <div className="flex items-center gap-3 mb-4">
                 <Icon name="User" className="text-[#10B981]" size={24} />
@@ -351,7 +351,7 @@ export default function ReactionGame() {
               <div className="flex items-center gap-3 mb-6">
                 <Icon name="Trophy" className="text-[#EF4444]" size={32} />
                 <h3 className="text-3xl font-bold text-[#1F2937]">
-                  Таблица лидеров
+                  Таблица лидеров (реакция)
                 </h3>
               </div>
               
@@ -422,13 +422,114 @@ export default function ReactionGame() {
               </div>
             </Card>
 
-            {gameMode === 'clicks' ? <ClickSpeedGame /> : (
-              <Card className="p-8 border-2 border-[#E5E7EB]">
-                <div className="text-center text-[#6B7280]">
-                  <Icon name="Zap" size={48} className="mx-auto mb-4 text-[#10B981]" />
-                  <p className="text-xl">Тест реакции находится на вкладке "Игра"</p>
+            {gameMode === 'clicks' ? (
+              <ClickSpeedGame />
+            ) : (
+              <>
+                <Card className="p-6 border-2 border-[#E5E7EB]">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Icon name="User" className="text-[#10B981]" size={24} />
+                    <h3 className="text-sm font-medium text-[#6B7280] uppercase tracking-wide">
+                      Имя игрока
+                    </h3>
+                  </div>
+                  <Input
+                    value={playerName}
+                    onChange={(e) => setPlayerName(e.target.value)}
+                    className={`text-lg ${(!playerName.trim() || playerName.trim().toLowerCase() === 'игрок') ? 'border-2 border-[#EF4444]' : 'border-2 border-[#10B981]'}`}
+                    placeholder="Введите ваше имя (не 'Игрок')"
+                  />
+                  {(!playerName.trim() || playerName.trim().toLowerCase() === 'игрок') && (
+                    <p className="text-[#EF4444] text-sm mt-2 font-medium">
+                      ⚠️ Введите уникальное имя для начала игры
+                    </p>
+                  )}
+                </Card>
+
+                <div className="grid md:grid-cols-3 gap-6">
+                  <Card className="p-6 border-2 border-[#E5E7EB]">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Icon name="Zap" className="text-[#10B981]" size={24} />
+                      <h3 className="text-sm font-medium text-[#6B7280] uppercase tracking-wide">
+                        Текущий результат
+                      </h3>
+                    </div>
+                    <p className="text-4xl font-bold text-[#1F2937] font-['Roboto_Mono']">
+                      {gameState === 'green' && running
+                        ? formatTime(reactionTime)
+                        : gameState === 'clicked'
+                        ? `${reactionTime} мс`
+                        : '—'}
+                    </p>
+                  </Card>
+
+                  <Card className="p-6 border-2 border-[#E5E7EB]">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Icon name="Trophy" className="text-[#EF4444]" size={24} />
+                      <h3 className="text-sm font-medium text-[#6B7280] uppercase tracking-wide">
+                        Лучший результат
+                      </h3>
+                    </div>
+                    <p className="text-4xl font-bold text-[#1F2937] font-['Roboto_Mono']">
+                      {bestTime ? `${bestTime} мс` : '—'}
+                    </p>
+                  </Card>
+
+                  <Card className="p-6 border-2 border-[#E5E7EB]">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Icon name="Target" className="text-[#6B7280]" size={24} />
+                      <h3 className="text-sm font-medium text-[#6B7280] uppercase tracking-wide">
+                        Попыток
+                      </h3>
+                    </div>
+                    <p className="text-4xl font-bold text-[#1F2937] font-['Roboto_Mono']">
+                      {results.length}
+                    </p>
+                  </Card>
                 </div>
-              </Card>
+
+                {gameState === 'timeout' && showSpecialMessage && (
+                  <Card className="p-8 border-4 border-[#EF4444] bg-[#FEF2F2] animate-fade-in">
+                    <div className="flex flex-col items-center gap-6 text-center">
+                      <img 
+                        src={FACEPALM_IMAGE} 
+                        alt="Facepalm"
+                        className="w-64 h-64 object-cover rounded-2xl shadow-lg"
+                      />
+                      <p className="text-2xl md:text-3xl font-bold text-[#EF4444] leading-relaxed">
+                        {getTimeoutMessage()}
+                      </p>
+                      <Button
+                        onClick={() => setActiveTab('rules')}
+                        className="bg-[#10B981] hover:bg-[#059669] text-white text-lg px-8 py-6"
+                      >
+                        Перечитать правила
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+
+                {gameState === 'clicked' && showSpecialMessage && specialMessageText && (
+                  <Card className="p-8 border-4 border-[#F59E0B] bg-[#FFFBEB] animate-fade-in">
+                    <div className="flex flex-col items-center gap-4 text-center">
+                      <Icon name="Lightbulb" className="text-[#F59E0B]" size={64} />
+                      <p className="text-2xl md:text-3xl font-bold text-[#F59E0B] leading-relaxed">
+                        {specialMessageText}
+                      </p>
+                    </div>
+                  </Card>
+                )}
+
+                <Card className="p-12 md:p-20 border-2 border-[#E5E7EB] flex items-center justify-center">
+                  <Button
+                    onClick={handleButtonClick}
+                    disabled={(gameState === 'failed' || gameState === 'clicked') && !showSpecialMessage}
+                    className={`w-full max-w-2xl h-48 md:h-64 text-3xl md:text-5xl font-bold rounded-2xl transition-all duration-300 ${getButtonColor()} text-white shadow-lg hover:shadow-xl disabled:opacity-100`}
+                  >
+                    {getButtonText()}
+                  </Button>
+                </Card>
+              </>
             )}
           </TabsContent>
 
@@ -438,7 +539,7 @@ export default function ReactionGame() {
                 <div className="flex items-center gap-3 mb-4">
                   <Icon name="BarChart3" className="text-[#10B981]" size={28} />
                   <h3 className="text-2xl font-bold text-[#1F2937]">
-                    Личная статистика
+                    Статистика реакции
                   </h3>
                 </div>
                 <div className="space-y-4">
@@ -494,6 +595,10 @@ export default function ReactionGame() {
                 )}
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="clicks-stats" className="space-y-6">
+            <ClickSpeedGame showStatsOnly={true} />
           </TabsContent>
 
           <TabsContent value="rules" className="space-y-6">
