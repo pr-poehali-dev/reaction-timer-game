@@ -27,6 +27,7 @@ interface LeaderboardEntry {
 const DURATIONS = [5, 10, 15, 30, 60];
 const GOOD_IMAGE = 'https://cdn.poehali.dev/projects/2abab238-5391-40ae-ab82-56d894a10964/files/c243b697-0530-4897-a4ab-193a0c154e79.jpg';
 const MUSCLE_IMAGE = 'https://cdn.poehali.dev/projects/2abab238-5391-40ae-ab82-56d894a10964/files/1e92adba-5c64-444f-a0e1-7b69470846f4.jpg';
+const BITE_87_IMAGE = 'https://cdn.poehali.dev/files/e58cd18a-3f6e-4773-88fb-dd5e9ad031af.jpg';
 const SAVE_CLICK_URL = 'https://functions.poehali.dev/d2d66c13-c48a-48c4-936f-064e986c9d93';
 const GET_CLICK_LEADERBOARD_URL = 'https://functions.poehali.dev/528579c6-94bd-4ddb-af79-91ed85bdffcc';
 
@@ -143,7 +144,10 @@ export default function ClickSpeedGame({ showStatsOnly = false }: ClickSpeedGame
   };
 
   const checkAchievements = (totalClicks: number, duration: number) => {
-    if (duration === 10 && totalClicks >= 150) {
+    if (totalClicks === 87) {
+      setAchievement({ text: 'Was That The Bite Of 87?!?!', image: BITE_87_IMAGE });
+      setShowAchievement(true);
+    } else if (duration === 10 && totalClicks >= 150) {
       setAchievement({ text: 'НАКАЧАННЫЕ ПАЛЬЦЫ! 💪', image: MUSCLE_IMAGE });
       setShowAchievement(true);
     } else if (duration === 10 && totalClicks >= 100) {
