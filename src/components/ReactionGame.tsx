@@ -231,8 +231,9 @@ export default function ReactionGame() {
         </header>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="modes">Режимы</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="modes">Тест реакции</TabsTrigger>
+            <TabsTrigger value="clicks">Скорость кликов</TabsTrigger>
             <TabsTrigger value="leaderboard">Лидеры</TabsTrigger>
             <TabsTrigger value="stats">Статистика</TabsTrigger>
             <TabsTrigger value="clicks-stats">Результаты кликов</TabsTrigger>
@@ -497,6 +498,10 @@ export default function ReactionGame() {
                 {getButtonText()}
               </Button>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="clicks" className="space-y-6">
+            <ClickSpeedGame />
           </TabsContent>
 
           <TabsContent value="stats" className="space-y-6">
