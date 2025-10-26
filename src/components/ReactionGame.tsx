@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import Icon from '@/components/ui/icon';
 import ClickSpeedGame from '@/components/ClickSpeedGame';
+import ChessGame from '@/components/ChessGame';
 
 type GameState = 'waiting' | 'ready' | 'green' | 'clicked' | 'failed' | 'timeout';
 
@@ -251,9 +252,10 @@ export default function ReactionGame() {
         </header>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="modes">Тест реакции</TabsTrigger>
             <TabsTrigger value="clicks">Скорость кликов</TabsTrigger>
+            <TabsTrigger value="chess">Шахматы</TabsTrigger>
             <TabsTrigger value="leaderboard">Лидеры</TabsTrigger>
             <TabsTrigger value="stats">Статистика</TabsTrigger>
             <TabsTrigger value="rules">Правила</TabsTrigger>
@@ -501,6 +503,10 @@ export default function ReactionGame() {
 
           <TabsContent value="clicks" className="space-y-6">
             <ClickSpeedGame />
+          </TabsContent>
+
+          <TabsContent value="chess" className="space-y-6">
+            <ChessGame />
           </TabsContent>
 
           <TabsContent value="stats" className="space-y-6">
