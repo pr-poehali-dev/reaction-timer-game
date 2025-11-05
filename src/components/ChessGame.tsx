@@ -1,365 +1,268 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Chess, Square, PieceSymbol, Color } from 'chess.js';
-import { Chessboard } from 'react-chessboard';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 
-type GameStatus = 'playing' | 'checkmate' | 'draw' | 'stalemate';
+type PieceType = 'p' | 'r' | 'n' | 'b' | 'q' | 'k';
+type Color = 'w' | 'b';
 
-interface GameResult {
-  status: GameStatus;
-  winner?: 'white' | 'black' | 'draw';
-  timestamp: Date;
-  moves: number;
+interface Piece {
+  type: PieceType;
+  color: Color;
 }
 
-const DIFFICULTY_LEVELS = {
-  easy: { name: 'Легко', depth: 1 },
-  medium: { name: 'Средне', depth: 2 },
-  hard: { name: 'Сложно', depth: 3 },
-  expert: { name: 'Эксперт', depth: 4 }
+interface Position {
+  row: number;
+  col: number;
+}
+
+type Board = (Piece | null)[][];
+
+const PIECE_SYMBOLS: Record<string, string> = {
+  'wp': '♙', 'wr': '♖', 'wn': '♘', 'wb': '♗', 'wq': '♕', 'wk': '♔',
+  'bp': '♟', 'br': '♜', 'bn': '♞', 'bb': '♝', 'bq': '♛', 'bk': '♚',
 };
 
-export default function ChessGame() {
-  const [game, setGame] = useState(new Chess());
-  const [gameStatus, setGameStatus] = useState<GameStatus>('playing');
-  const [moveHistory, setMoveHistory] = useState<string[]>([]);
-  const [difficulty, setDifficulty] = useState<keyof typeof DIFFICULTY_LEVELS>('medium');
-  const [thinking, setThinking] = useState(false);
-  const [gameResults, setGameResults] = useState<GameResult[]>([]);
-  const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
+const initialBoard = (): Board => [
+  [
+    { type: 'r', color: 'b' }, { type: 'n', color: 'b' }, { type: 'b', color: 'b' }, { type: 'q', color: 'b' },
+    { type: 'k', color: 'b' }, { type: 'b', color: 'b' }, { type: 'n', color: 'b' }, { type: 'r', color: 'b' }
+  ],
+  Array(8).fill(null).map(() => ({ type: 'p', color: 'b' } as Piece)),
+  Array(8).fill(null),
+  Array(8).fill(null),
+  Array(8).fill(null),
+  Array(8).fill(null),
+  Array(8).fill(null).map(() => ({ type: 'p', color: 'w' } as Piece)),
+  [
+    { type: 'r', color: 'w' }, { type: 'n', color: 'w' }, { type: 'b', color: 'w' }, { type: 'q', color: 'w' },
+    { type: 'k', color: 'w' }, { type: 'b', color: 'w' }, { type: 'n', color: 'w' }, { type: 'r', color: 'w' }
+  ],
+];
 
-  const evaluateBoard = (chess: Chess): number => {
-    const pieceValues: Record<PieceSymbol, number> = {
-      p: 1,
-      n: 3,
-      b: 3,
-      r: 5,
-      q: 9,
-      k: 0
-    };
+const ChessGame = () => {
+  const [board, setBoard] = useState<Board>(initialBoard());
+  const [selectedSquare, setSelectedSquare] = useState<Position | null>(null);
+  const [turn, setTurn] = useState<Color>('w');
+  const [gameOver, setGameOver] = useState(false);
+  const [winner, setWinner] = useState<'white' | 'black' | 'draw' | null>(null);
 
-    let score = 0;
-    const board = chess.board();
+  const isValidMove = (from: Position, to: Position, piece: Piece): boolean => {
+    if (from.row === to.row && from.col === to.col) return false;
 
-    for (let i = 0; i < 8; i++) {
-      for (let j = 0; j < 8; j++) {
-        const piece = board[i][j];
-        if (piece) {
-          const value = pieceValues[piece.type];
-          score += piece.color === 'w' ? -value : value;
+    const targetPiece = board[to.row][to.col];
+    if (targetPiece && targetPiece.color === piece.color) return false;
+
+    const rowDiff = Math.abs(to.row - from.row);
+    const colDiff = Math.abs(to.col - from.col);
+
+    switch (piece.type) {
+      case 'p':
+        const direction = piece.color === 'w' ? -1 : 1;
+        const startRow = piece.color === 'w' ? 6 : 1;
+        
+        if (from.col === to.col && !targetPiece) {
+          if (to.row === from.row + direction) return true;
+          if (from.row === startRow && to.row === from.row + 2 * direction && !board[from.row + direction][from.col]) return true;
+        }
+        
+        if (colDiff === 1 && to.row === from.row + direction && targetPiece) return true;
+        return false;
+
+      case 'r':
+        return (from.row === to.row || from.col === to.col) && isPathClear(from, to);
+
+      case 'n':
+        return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
+
+      case 'b':
+        return rowDiff === colDiff && isPathClear(from, to);
+
+      case 'q':
+        return ((from.row === to.row || from.col === to.col) || (rowDiff === colDiff)) && isPathClear(from, to);
+
+      case 'k':
+        return rowDiff <= 1 && colDiff <= 1;
+
+      default:
+        return false;
+    }
+  };
+
+  const isPathClear = (from: Position, to: Position): boolean => {
+    const rowStep = to.row > from.row ? 1 : to.row < from.row ? -1 : 0;
+    const colStep = to.col > from.col ? 1 : to.col < from.col ? -1 : 0;
+
+    let currentRow = from.row + rowStep;
+    let currentCol = from.col + colStep;
+
+    while (currentRow !== to.row || currentCol !== to.col) {
+      if (board[currentRow][currentCol]) return false;
+      currentRow += rowStep;
+      currentCol += colStep;
+    }
+
+    return true;
+  };
+
+  const makeComputerMove = () => {
+    const possibleMoves: { from: Position; to: Position }[] = [];
+
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const piece = board[row][col];
+        if (piece && piece.color === 'b') {
+          for (let toRow = 0; toRow < 8; toRow++) {
+            for (let toCol = 0; toCol < 8; toCol++) {
+              if (isValidMove({ row, col }, { row: toRow, col: toCol }, piece)) {
+                possibleMoves.push({ from: { row, col }, to: { row: toRow, col: toCol } });
+              }
+            }
+          }
         }
       }
     }
 
-    return score;
-  };
-
-  const minimax = (
-    chess: Chess,
-    depth: number,
-    alpha: number,
-    beta: number,
-    maximizingPlayer: boolean
-  ): number => {
-    if (depth === 0 || chess.isGameOver()) {
-      return evaluateBoard(chess);
+    if (possibleMoves.length === 0) {
+      setGameOver(true);
+      setWinner('white');
+      return;
     }
 
-    const moves = chess.moves({ verbose: true });
+    const randomMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+    const newBoard = board.map(row => [...row]);
+    newBoard[randomMove.to.row][randomMove.to.col] = newBoard[randomMove.from.row][randomMove.from.col];
+    newBoard[randomMove.from.row][randomMove.from.col] = null;
 
-    if (maximizingPlayer) {
-      let maxEval = -Infinity;
-      for (const move of moves) {
-        chess.move(move);
-        const evaluation = minimax(chess, depth - 1, alpha, beta, false);
-        chess.undo();
-        maxEval = Math.max(maxEval, evaluation);
-        alpha = Math.max(alpha, evaluation);
-        if (beta <= alpha) break;
-      }
-      return maxEval;
-    } else {
-      let minEval = Infinity;
-      for (const move of moves) {
-        chess.move(move);
-        const evaluation = minimax(chess, depth - 1, alpha, beta, true);
-        chess.undo();
-        minEval = Math.min(minEval, evaluation);
-        beta = Math.min(beta, evaluation);
-        if (beta <= alpha) break;
-      }
-      return minEval;
-    }
+    setBoard(newBoard);
+    setTurn('w');
   };
-
-  const getBestMove = (chess: Chess, depth: number) => {
-    const moves = chess.moves({ verbose: true });
-    let bestMove = moves[0];
-    let bestValue = -Infinity;
-
-    for (const move of moves) {
-      chess.move(move);
-      const boardValue = minimax(chess, depth - 1, -Infinity, Infinity, false);
-      chess.undo();
-
-      if (boardValue > bestValue) {
-        bestValue = boardValue;
-        bestMove = move;
-      }
-    }
-
-    return bestMove;
-  };
-
-  const makeComputerMove = useCallback(() => {
-    if (game.isGameOver() || game.turn() !== 'b') return;
-
-    setThinking(true);
-
-    setTimeout(() => {
-      const gameCopy = new Chess(game.fen());
-      const bestMove = getBestMove(gameCopy, DIFFICULTY_LEVELS[difficulty].depth);
-      
-      if (bestMove) {
-        const newGame = new Chess(game.fen());
-        newGame.move(bestMove);
-        setGame(newGame);
-        setMoveHistory(prev => [...prev, bestMove.san]);
-        checkGameStatus(newGame);
-      }
-      
-      setThinking(false);
-    }, 300);
-  }, [game, difficulty]);
 
   useEffect(() => {
-    if (game.turn() === 'b' && gameStatus === 'playing') {
-      makeComputerMove();
+    if (turn === 'b' && !gameOver) {
+      const timer = setTimeout(() => makeComputerMove(), 500);
+      return () => clearTimeout(timer);
     }
-  }, [game, gameStatus, makeComputerMove]);
+  }, [turn, gameOver]);
 
-  const checkGameStatus = (chess: Chess) => {
-    if (chess.isCheckmate()) {
-      const winner = chess.turn() === 'w' ? 'black' : 'white';
-      setGameStatus('checkmate');
-      addGameResult('checkmate', winner, chess.history().length);
-    } else if (chess.isDraw()) {
-      setGameStatus('draw');
-      addGameResult('draw', 'draw', chess.history().length);
-    } else if (chess.isStalemate()) {
-      setGameStatus('stalemate');
-      addGameResult('stalemate', 'draw', chess.history().length);
-    }
-  };
+  const handleSquareClick = (row: number, col: number) => {
+    if (gameOver || turn !== 'w') return;
 
-  const addGameResult = (status: GameStatus, winner: 'white' | 'black' | 'draw', moves: number) => {
-    const result: GameResult = {
-      status,
-      winner,
-      timestamp: new Date(),
-      moves
-    };
-    setGameResults(prev => [result, ...prev].slice(0, 10));
-  };
+    const piece = board[row][col];
 
-  const onDrop = (sourceSquare: Square, targetSquare: Square) => {
-    if (gameStatus !== 'playing' || thinking || game.turn() !== 'w') {
-      return false;
-    }
+    if (selectedSquare) {
+      const selectedPiece = board[selectedSquare.row][selectedSquare.col];
+      
+      if (selectedPiece && isValidMove(selectedSquare, { row, col }, selectedPiece)) {
+        const newBoard = board.map(row => [...row]);
+        newBoard[row][col] = selectedPiece;
+        newBoard[selectedSquare.row][selectedSquare.col] = null;
 
-    try {
-      const gameCopy = new Chess(game.fen());
-      const move = gameCopy.move({
-        from: sourceSquare,
-        to: targetSquare,
-        promotion: 'q'
-      });
+        const capturedKing = board[row][col]?.type === 'k';
+        if (capturedKing) {
+          setGameOver(true);
+          setWinner('white');
+        }
 
-      if (move) {
-        setGame(gameCopy);
-        setMoveHistory(prev => [...prev, move.san]);
+        setBoard(newBoard);
         setSelectedSquare(null);
-        checkGameStatus(gameCopy);
-        return true;
+        setTurn('b');
+      } else {
+        setSelectedSquare(piece && piece.color === 'w' ? { row, col } : null);
       }
-    } catch (error) {
-      return false;
+    } else {
+      if (piece && piece.color === 'w') {
+        setSelectedSquare({ row, col });
+      }
     }
-
-    return false;
   };
 
   const resetGame = () => {
-    setGame(new Chess());
-    setGameStatus('playing');
-    setMoveHistory([]);
+    setBoard(initialBoard());
     setSelectedSquare(null);
+    setTurn('w');
+    setGameOver(false);
+    setWinner(null);
   };
-
-  const getStatusMessage = () => {
-    if (thinking) return '🤔 Компьютер думает...';
-    if (gameStatus === 'checkmate') {
-      return game.turn() === 'w' 
-        ? '😢 Вы проиграли! Шах и мат!' 
-        : '🎉 Вы победили! Шах и мат!';
-    }
-    if (gameStatus === 'draw') return '🤝 Ничья!';
-    if (gameStatus === 'stalemate') return '🤝 Пат! Ничья!';
-    if (game.inCheck()) {
-      return game.turn() === 'w' ? '⚠️ Вам шах!' : '⚠️ Компьютеру шах!';
-    }
-    return game.turn() === 'w' ? '♟️ Ваш ход (белые)' : '🤖 Ход компьютера (черные)';
-  };
-
-  const wins = gameResults.filter(r => r.winner === 'white').length;
-  const losses = gameResults.filter(r => r.winner === 'black').length;
-  const draws = gameResults.filter(r => r.winner === 'draw').length;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <Card className="p-6 border-2 border-[#E5E7EB]">
-        <div className="flex items-center gap-3 mb-6">
-          <Icon name="Crown" className="text-[#F59E0B]" size={32} />
-          <h2 className="text-3xl font-bold text-[#1F2937]">Шахматы против компьютера</h2>
-        </div>
+    <Card className="p-6 border-2 border-[#E5E7EB]">
+      <div className="flex items-center gap-3 mb-6">
+        <Icon name="Crown" className="text-[#F59E0B]" size={28} />
+        <h3 className="text-2xl font-bold text-[#1F2937]">Шахматы</h3>
+      </div>
 
-        <div className="grid lg:grid-cols-[1fr_auto] gap-6">
-          <div className="space-y-4">
-            <Card className={`p-4 text-center border-2 ${
-              gameStatus === 'checkmate' && game.turn() === 'b'
-                ? 'border-[#10B981] bg-[#D1FAE5]'
-                : gameStatus === 'checkmate' && game.turn() === 'w'
-                ? 'border-[#EF4444] bg-[#FEE2E2]'
-                : 'border-[#E5E7EB]'
-            }`}>
-              <p className="text-xl font-bold text-[#1F2937]">{getStatusMessage()}</p>
-            </Card>
-
-            <div className="max-w-[600px] mx-auto">
-              <Chessboard
-                position={game.fen()}
-                onPieceDrop={onDrop}
-                boardOrientation="white"
-                customBoardStyle={{
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-                }}
-                customDarkSquareStyle={{ backgroundColor: '#779952' }}
-                customLightSquareStyle={{ backgroundColor: '#edeed1' }}
-                arePiecesDraggable={gameStatus === 'playing' && !thinking && game.turn() === 'w'}
-              />
-            </div>
-
-            <div className="flex gap-3 justify-center flex-wrap">
-              <Button
-                onClick={resetGame}
-                className="bg-[#10B981] hover:bg-[#059669] text-white font-bold px-6 py-3"
-              >
-                <Icon name="RotateCcw" size={20} className="mr-2" />
-                Новая игра
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-[#6B7280] font-medium">Уровень сложности:</p>
-              <div className="flex gap-2 justify-center flex-wrap">
-                {Object.entries(DIFFICULTY_LEVELS).map(([key, value]) => (
-                  <Button
-                    key={key}
-                    onClick={() => setDifficulty(key as keyof typeof DIFFICULTY_LEVELS)}
-                    variant={difficulty === key ? 'default' : 'outline'}
-                    className={`font-bold ${
-                      difficulty === key
-                        ? 'bg-[#3B82F6] hover:bg-[#2563EB] text-white'
-                        : 'border-2 border-[#E5E7EB] hover:border-[#3B82F6]'
-                    }`}
-                  >
-                    {value.name}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:w-[300px] space-y-4">
-            <Card className="p-4 border-2 border-[#E5E7EB]">
-              <div className="flex items-center gap-2 mb-3">
-                <Icon name="List" className="text-[#6B7280]" size={20} />
-                <h3 className="font-bold text-[#1F2937]">История ходов</h3>
-              </div>
-              <div className="max-h-[400px] overflow-y-auto space-y-1">
-                {moveHistory.length === 0 ? (
-                  <p className="text-[#6B7280] text-sm text-center py-4">Начните игру</p>
-                ) : (
-                  moveHistory.map((move, index) => (
-                    <div
-                      key={index}
-                      className={`flex items-center gap-2 p-2 rounded ${
-                        index % 2 === 0 ? 'bg-[#F9FAFB]' : 'bg-white'
-                      }`}
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex-1">
+          <div className="inline-block border-4 border-[#374151] rounded-lg overflow-hidden shadow-xl">
+            {board.map((row, rowIndex) => (
+              <div key={rowIndex} className="flex">
+                {row.map((piece, colIndex) => {
+                  const isLight = (rowIndex + colIndex) % 2 === 0;
+                  const isSelected = selectedSquare?.row === rowIndex && selectedSquare?.col === colIndex;
+                  
+                  return (
+                    <button
+                      key={colIndex}
+                      onClick={() => handleSquareClick(rowIndex, colIndex)}
+                      disabled={gameOver}
+                      className={`
+                        w-14 h-14 md:w-16 md:h-16 flex items-center justify-center text-4xl md:text-5xl
+                        transition-all duration-200
+                        ${isLight ? 'bg-[#F0D9B5]' : 'bg-[#B58863]'}
+                        ${isSelected ? 'ring-4 ring-[#10B981] ring-inset' : ''}
+                        ${!gameOver && turn === 'w' && piece?.color === 'w' ? 'hover:brightness-110 cursor-pointer' : ''}
+                        disabled:cursor-not-allowed
+                      `}
                     >
-                      <span className="font-['Roboto_Mono'] text-[#6B7280] text-sm w-8">
-                        {Math.floor(index / 2) + 1}.
-                      </span>
-                      <span className={`font-['Roboto_Mono'] font-bold ${
-                        index % 2 === 0 ? 'text-[#1F2937]' : 'text-[#3B82F6]'
-                      }`}>
-                        {move}
-                      </span>
-                      <span className="text-xs text-[#6B7280]">
-                        {index % 2 === 0 ? '♟️' : '🤖'}
-                      </span>
-                    </div>
-                  ))
-                )}
+                      {piece && PIECE_SYMBOLS[`${piece.color}${piece.type}`]}
+                    </button>
+                  );
+                })}
               </div>
-            </Card>
-
-            <Card className="p-4 border-2 border-[#E5E7EB]">
-              <div className="flex items-center gap-2 mb-3">
-                <Icon name="BarChart3" className="text-[#10B981]" size={20} />
-                <h3 className="font-bold text-[#1F2937]">Статистика</h3>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center p-2 bg-[#D1FAE5] rounded">
-                  <span className="text-[#059669] font-medium">Победы:</span>
-                  <span className="font-['Roboto_Mono'] text-xl font-bold text-[#059669]">
-                    {wins}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-2 bg-[#FEE2E2] rounded">
-                  <span className="text-[#DC2626] font-medium">Поражения:</span>
-                  <span className="font-['Roboto_Mono'] text-xl font-bold text-[#DC2626]">
-                    {losses}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-2 bg-[#E5E7EB] rounded">
-                  <span className="text-[#6B7280] font-medium">Ничьи:</span>
-                  <span className="font-['Roboto_Mono'] text-xl font-bold text-[#6B7280]">
-                    {draws}
-                  </span>
-                </div>
-              </div>
-            </Card>
+            ))}
           </div>
         </div>
-      </Card>
 
-      <Card className="p-6 border-2 border-[#E5E7EB] bg-[#F9FAFB]">
-        <div className="flex items-center gap-3 mb-3">
-          <Icon name="Info" className="text-[#3B82F6]" size={24} />
-          <h3 className="text-lg font-bold text-[#1F2937]">Правила и подсказки</h3>
+        <div className="lg:w-80 space-y-4">
+          <Card className="p-4 bg-[#F9FAFB] border-2 border-[#E5E7EB]">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[#6B7280] font-medium">Ход:</span>
+              <span className={`text-2xl font-bold ${turn === 'w' ? 'text-[#3B82F6]' : 'text-[#1F2937]'}`}>
+                {turn === 'w' ? '♔ Белые (Вы)' : '♚ Чёрные (AI)'}
+              </span>
+            </div>
+
+            {gameOver && (
+              <div className="p-4 bg-white rounded-lg border-2 border-[#10B981] text-center">
+                <p className="text-xl font-bold text-[#10B981] mb-2">
+                  {winner === 'white' ? '🎉 Вы победили!' : winner === 'black' ? '😔 AI победил' : '🤝 Ничья'}
+                </p>
+              </div>
+            )}
+          </Card>
+
+          <Button
+            onClick={resetGame}
+            className="w-full bg-[#3B82F6] hover:bg-[#2563EB] text-white text-lg font-semibold py-6"
+          >
+            <Icon name="RotateCcw" className="mr-2" size={20} />
+            Новая игра
+          </Button>
+
+          <Card className="p-4 bg-[#F9FAFB] border-2 border-[#E5E7EB]">
+            <h4 className="font-bold text-[#1F2937] mb-2">Правила:</h4>
+            <ul className="text-sm text-[#6B7280] space-y-1">
+              <li>• Вы играете белыми фигурами</li>
+              <li>• Кликните на фигуру, затем на клетку</li>
+              <li>• Съешьте короля противника</li>
+              <li>• AI делает случайные ходы</li>
+            </ul>
+          </Card>
         </div>
-        <div className="text-[#6B7280] space-y-2 text-sm">
-          <p>• Вы играете белыми фигурами и всегда ходите первыми</p>
-          <p>• Перетаскивайте фигуры мышью для совершения хода</p>
-          <p>• Компьютер использует алгоритм Minimax с Alpha-Beta отсечением</p>
-          <p>• Уровень сложности можно менять в любой момент игры</p>
-          <p>• Пешка автоматически превращается в ферзя при достижении последней горизонтали</p>
-        </div>
-      </Card>
-    </div>
+      </div>
+    </Card>
   );
-}
+};
+
+export default ChessGame;
