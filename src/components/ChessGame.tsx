@@ -40,12 +40,16 @@ const initialBoard = (): Board => [
   ],
 ];
 
+type Difficulty = 'easy' | 'medium' | 'hard';
+
 const ChessGame = () => {
   const [board, setBoard] = useState<Board>(initialBoard());
   const [selectedSquare, setSelectedSquare] = useState<Position | null>(null);
   const [turn, setTurn] = useState<Color>('w');
   const [gameOver, setGameOver] = useState(false);
   const [winner, setWinner] = useState<'white' | 'black' | 'draw' | null>(null);
+  const [difficulty, setDifficulty] = useState<Difficulty>('medium');
+  const [validMoves, setValidMoves] = useState<Position[]>([]);
 
   const isValidMove = (from: Position, to: Position, piece: Piece): boolean => {
     if (from.row === to.row && from.col === to.col) return false;
@@ -105,6 +109,23 @@ const ChessGame = () => {
     return true;
   };
 
+  const evaluateMove = (move: { from: Position; to: Position }): number => {
+    const targetPiece = board[move.to.row][move.to.col];
+    const pieceValues: Record<PieceType, number> = {
+      'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 100
+    };
+    
+    let score = 0;
+    if (targetPiece) {
+      score += pieceValues[targetPiece.type];
+    }
+    
+    const centerBonus = (4 - Math.abs(3.5 - move.to.row)) + (4 - Math.abs(3.5 - move.to.col));
+    score += centerBonus * 0.1;
+    
+    return score;
+  };
+
   const makeComputerMove = () => {
     const possibleMoves: { from: Position; to: Position }[] = [];
 
@@ -129,10 +150,25 @@ const ChessGame = () => {
       return;
     }
 
-    const randomMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+    let selectedMove;
+    
+    if (difficulty === 'easy') {
+      selectedMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+    } else if (difficulty === 'medium') {
+      const topMoves = possibleMoves
+        .map(move => ({ move, score: evaluateMove(move) }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, Math.ceil(possibleMoves.length * 0.3));
+      selectedMove = topMoves[Math.floor(Math.random() * topMoves.length)].move;
+    } else {
+      selectedMove = possibleMoves
+        .map(move => ({ move, score: evaluateMove(move) }))
+        .sort((a, b) => b.score - a.score)[0].move;
+    }
+
     const newBoard = board.map(row => [...row]);
-    newBoard[randomMove.to.row][randomMove.to.col] = newBoard[randomMove.from.row][randomMove.from.col];
-    newBoard[randomMove.from.row][randomMove.from.col] = null;
+    newBoard[selectedMove.to.row][selectedMove.to.col] = newBoard[selectedMove.from.row][selectedMove.from.col];
+    newBoard[selectedMove.from.row][selectedMove.from.col] = null;
 
     setBoard(newBoard);
     setTurn('w');
@@ -144,6 +180,21 @@ const ChessGame = () => {
       return () => clearTimeout(timer);
     }
   }, [turn, gameOver]);
+
+  const calculateValidMoves = (pos: Position): Position[] => {
+    const piece = board[pos.row][pos.col];
+    if (!piece) return [];
+    
+    const moves: Position[] = [];
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        if (isValidMove(pos, { row, col }, piece)) {
+          moves.push({ row, col });
+        }
+      }
+    }
+    return moves;
+  };
 
   const handleSquareClick = (row: number, col: number) => {
     if (gameOver || turn !== 'w') return;
@@ -166,13 +217,21 @@ const ChessGame = () => {
 
         setBoard(newBoard);
         setSelectedSquare(null);
+        setValidMoves([]);
         setTurn('b');
       } else {
-        setSelectedSquare(piece && piece.color === 'w' ? { row, col } : null);
+        if (piece && piece.color === 'w') {
+          setSelectedSquare({ row, col });
+          setValidMoves(calculateValidMoves({ row, col }));
+        } else {
+          setSelectedSquare(null);
+          setValidMoves([]);
+        }
       }
     } else {
       if (piece && piece.color === 'w') {
         setSelectedSquare({ row, col });
+        setValidMoves(calculateValidMoves({ row, col }));
       }
     }
   };
@@ -180,6 +239,7 @@ const ChessGame = () => {
   const resetGame = () => {
     setBoard(initialBoard());
     setSelectedSquare(null);
+    setValidMoves([]);
     setTurn('w');
     setGameOver(false);
     setWinner(null);
@@ -200,6 +260,8 @@ const ChessGame = () => {
                 {row.map((piece, colIndex) => {
                   const isLight = (rowIndex + colIndex) % 2 === 0;
                   const isSelected = selectedSquare?.row === rowIndex && selectedSquare?.col === colIndex;
+                  const isValidMoveSquare = validMoves.some(move => move.row === rowIndex && move.col === colIndex);
+                  const isAttackSquare = isValidMoveSquare && board[rowIndex][colIndex] !== null;
                   
                   return (
                     <button
@@ -207,7 +269,7 @@ const ChessGame = () => {
                       onClick={() => handleSquareClick(rowIndex, colIndex)}
                       disabled={gameOver}
                       className={`
-                        w-14 h-14 md:w-16 md:h-16 flex items-center justify-center text-4xl md:text-5xl
+                        w-14 h-14 md:w-16 md:h-16 flex items-center justify-center text-4xl md:text-5xl relative
                         transition-all duration-200
                         ${isLight ? 'bg-[#F0D9B5]' : 'bg-[#B58863]'}
                         ${isSelected ? 'ring-4 ring-[#10B981] ring-inset' : ''}
@@ -216,6 +278,14 @@ const ChessGame = () => {
                       `}
                     >
                       {piece && PIECE_SYMBOLS[`${piece.color}${piece.type}`]}
+                      {isValidMoveSquare && !isAttackSquare && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-4 h-4 bg-[#10B981] rounded-full opacity-60"></div>
+                        </div>
+                      )}
+                      {isAttackSquare && (
+                        <div className="absolute inset-0 ring-4 ring-[#EF4444] ring-inset rounded-sm"></div>
+                      )}
                     </button>
                   );
                 })}
@@ -226,6 +296,29 @@ const ChessGame = () => {
 
         <div className="lg:w-80 space-y-4">
           <Card className="p-4 bg-[#F9FAFB] border-2 border-[#E5E7EB]">
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[#6B7280] mb-2">Сложность AI:</label>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setDifficulty('easy')}
+                  className={`flex-1 ${difficulty === 'easy' ? 'bg-[#10B981] hover:bg-[#059669]' : 'bg-[#E5E7EB] hover:bg-[#D1D5DB] text-[#1F2937]'}`}
+                >
+                  Легко
+                </Button>
+                <Button
+                  onClick={() => setDifficulty('medium')}
+                  className={`flex-1 ${difficulty === 'medium' ? 'bg-[#F59E0B] hover:bg-[#D97706]' : 'bg-[#E5E7EB] hover:bg-[#D1D5DB] text-[#1F2937]'}`}
+                >
+                  Средне
+                </Button>
+                <Button
+                  onClick={() => setDifficulty('hard')}
+                  className={`flex-1 ${difficulty === 'hard' ? 'bg-[#EF4444] hover:bg-[#DC2626]' : 'bg-[#E5E7EB] hover:bg-[#D1D5DB] text-[#1F2937]'}`}
+                >
+                  Сложно
+                </Button>
+              </div>
+            </div>
             <div className="flex items-center justify-between mb-3">
               <span className="text-[#6B7280] font-medium">Ход:</span>
               <span className={`text-2xl font-bold ${turn === 'w' ? 'text-[#3B82F6]' : 'text-[#1F2937]'}`}>
@@ -255,8 +348,9 @@ const ChessGame = () => {
             <ul className="text-sm text-[#6B7280] space-y-1">
               <li>• Вы играете белыми фигурами</li>
               <li>• Кликните на фигуру, затем на клетку</li>
+              <li>• 🟢 Зелёные точки — возможные ходы</li>
+              <li>• 🔴 Красная рамка — можно съесть</li>
               <li>• Съешьте короля противника</li>
-              <li>• AI делает случайные ходы</li>
             </ul>
           </Card>
         </div>
