@@ -349,7 +349,7 @@ const ChessGame = () => {
                       onClick={() => handleSquareClick(rowIndex, colIndex)}
                       disabled={gameOver}
                       className={`
-                        w-14 h-14 md:w-16 md:h-16 flex items-center justify-center text-4xl md:text-5xl relative
+                        w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center text-3xl sm:text-4xl md:text-5xl relative
                         transition-all duration-200
                         ${isLight ? 'bg-[#F0D9B5]' : 'bg-[#B58863]'}
                         ${isSelected ? 'ring-4 ring-[#10B981] ring-inset' : ''}
@@ -377,23 +377,23 @@ const ChessGame = () => {
         <div className="lg:w-80 space-y-4">
           <Card className="p-4 bg-[#F9FAFB] border-2 border-[#E5E7EB]">
             <div className="mb-4">
-              <label className="block text-sm font-medium text-[#6B7280] mb-2">Сложность AI:</label>
-              <div className="flex gap-2">
+              <label className="block text-sm font-medium text-[#6B7280] mb-3">Сложность AI:</label>
+              <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   onClick={() => setDifficulty('easy')}
-                  className={`flex-1 ${difficulty === 'easy' ? 'bg-[#10B981] hover:bg-[#059669]' : 'bg-[#E5E7EB] hover:bg-[#D1D5DB] text-[#1F2937]'}`}
+                  className={`flex-1 py-3 text-base font-semibold ${difficulty === 'easy' ? 'bg-[#10B981] hover:bg-[#059669]' : 'bg-[#E5E7EB] hover:bg-[#D1D5DB] text-[#1F2937]'}`}
                 >
                   Легко
                 </Button>
                 <Button
                   onClick={() => setDifficulty('medium')}
-                  className={`flex-1 ${difficulty === 'medium' ? 'bg-[#F59E0B] hover:bg-[#D97706]' : 'bg-[#E5E7EB] hover:bg-[#D1D5DB] text-[#1F2937]'}`}
+                  className={`flex-1 py-3 text-base font-semibold ${difficulty === 'medium' ? 'bg-[#F59E0B] hover:bg-[#D97706]' : 'bg-[#E5E7EB] hover:bg-[#D1D5DB] text-[#1F2937]'}`}
                 >
                   Средне
                 </Button>
                 <Button
                   onClick={() => setDifficulty('hard')}
-                  className={`flex-1 ${difficulty === 'hard' ? 'bg-[#EF4444] hover:bg-[#DC2626]' : 'bg-[#E5E7EB] hover:bg-[#D1D5DB] text-[#1F2937]'}`}
+                  className={`flex-1 py-3 text-base font-semibold ${difficulty === 'hard' ? 'bg-[#EF4444] hover:bg-[#DC2626]' : 'bg-[#E5E7EB] hover:bg-[#D1D5DB] text-[#1F2937]'}`}
                 >
                   Сложно
                 </Button>
@@ -425,7 +425,7 @@ const ChessGame = () => {
 
           <Button
             onClick={resetGame}
-            className="w-full bg-[#3B82F6] hover:bg-[#2563EB] text-white text-lg font-semibold py-6"
+            className="w-full bg-[#3B82F6] hover:bg-[#2563EB] text-white text-base sm:text-lg font-semibold py-4 sm:py-6"
           >
             <Icon name="RotateCcw" className="mr-2" size={20} />
             Новая игра
