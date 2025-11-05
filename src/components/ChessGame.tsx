@@ -50,11 +50,75 @@ const ChessGame = () => {
   const [winner, setWinner] = useState<'white' | 'black' | 'draw' | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [validMoves, setValidMoves] = useState<Position[]>([]);
+  const [isInCheck, setIsInCheck] = useState<{ white: boolean; black: boolean }>({ white: false, black: false });
 
   const isValidMove = (from: Position, to: Position, piece: Piece): boolean => {
+    if (!isBasicMove(from, to, piece)) return false;
+    
+    if (piece.type === 'k') {
+      const enemyColor: Color = piece.color === 'w' ? 'b' : 'w';
+      const testBoard = board.map(row => [...row]);
+      testBoard[to.row][to.col] = piece;
+      testBoard[from.row][from.col] = null;
+      
+      if (isSquareUnderAttack(to, enemyColor, testBoard)) {
+        return false;
+      }
+    }
+    
+    return !wouldBeInCheck(from, to, piece.color);
+  };
+
+  const isPathClear = (from: Position, to: Position, testBoard?: Board): boolean => {
+    const currentBoard = testBoard || board;
+    const rowStep = to.row > from.row ? 1 : to.row < from.row ? -1 : 0;
+    const colStep = to.col > from.col ? 1 : to.col < from.col ? -1 : 0;
+
+    let currentRow = from.row + rowStep;
+    let currentCol = from.col + colStep;
+
+    while (currentRow !== to.row || currentCol !== to.col) {
+      if (currentBoard[currentRow][currentCol]) return false;
+      currentRow += rowStep;
+      currentCol += colStep;
+    }
+
+    return true;
+  };
+
+  const findKing = (color: Color, testBoard?: Board): Position | null => {
+    const currentBoard = testBoard || board;
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const piece = currentBoard[row][col];
+        if (piece && piece.type === 'k' && piece.color === color) {
+          return { row, col };
+        }
+      }
+    }
+    return null;
+  };
+
+  const isSquareUnderAttack = (pos: Position, byColor: Color, testBoard?: Board): boolean => {
+    const currentBoard = testBoard || board;
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const piece = currentBoard[row][col];
+        if (piece && piece.color === byColor) {
+          if (isBasicMove({ row, col }, pos, piece, currentBoard)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+
+  const isBasicMove = (from: Position, to: Position, piece: Piece, testBoard?: Board): boolean => {
+    const currentBoard = testBoard || board;
     if (from.row === to.row && from.col === to.col) return false;
 
-    const targetPiece = board[to.row][to.col];
+    const targetPiece = currentBoard[to.row][to.col];
     if (targetPiece && targetPiece.color === piece.color) return false;
 
     const rowDiff = Math.abs(to.row - from.row);
@@ -67,23 +131,23 @@ const ChessGame = () => {
         
         if (from.col === to.col && !targetPiece) {
           if (to.row === from.row + direction) return true;
-          if (from.row === startRow && to.row === from.row + 2 * direction && !board[from.row + direction][from.col]) return true;
+          if (from.row === startRow && to.row === from.row + 2 * direction && !currentBoard[from.row + direction][from.col]) return true;
         }
         
         if (colDiff === 1 && to.row === from.row + direction && targetPiece) return true;
         return false;
 
       case 'r':
-        return (from.row === to.row || from.col === to.col) && isPathClear(from, to);
+        return (from.row === to.row || from.col === to.col) && isPathClear(from, to, testBoard);
 
       case 'n':
         return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
 
       case 'b':
-        return rowDiff === colDiff && isPathClear(from, to);
+        return rowDiff === colDiff && isPathClear(from, to, testBoard);
 
       case 'q':
-        return ((from.row === to.row || from.col === to.col) || (rowDiff === colDiff)) && isPathClear(from, to);
+        return ((from.row === to.row || from.col === to.col) || (rowDiff === colDiff)) && isPathClear(from, to, testBoard);
 
       case 'k':
         return rowDiff <= 1 && colDiff <= 1;
@@ -93,20 +157,19 @@ const ChessGame = () => {
     }
   };
 
-  const isPathClear = (from: Position, to: Position): boolean => {
-    const rowStep = to.row > from.row ? 1 : to.row < from.row ? -1 : 0;
-    const colStep = to.col > from.col ? 1 : to.col < from.col ? -1 : 0;
+  const wouldBeInCheck = (from: Position, to: Position, color: Color): boolean => {
+    const testBoard = board.map(row => [...row]);
+    testBoard[to.row][to.col] = testBoard[from.row][from.col];
+    testBoard[from.row][from.col] = null;
 
-    let currentRow = from.row + rowStep;
-    let currentCol = from.col + colStep;
+    const kingPos = testBoard[to.row][to.col]?.type === 'k' 
+      ? to 
+      : findKing(color, testBoard);
+    
+    if (!kingPos) return false;
 
-    while (currentRow !== to.row || currentCol !== to.col) {
-      if (board[currentRow][currentCol]) return false;
-      currentRow += rowStep;
-      currentCol += colStep;
-    }
-
-    return true;
+    const enemyColor: Color = color === 'w' ? 'b' : 'w';
+    return isSquareUnderAttack(kingPos, enemyColor, testBoard);
   };
 
   const evaluateMove = (move: { from: Position; to: Position }): number => {
@@ -171,7 +234,18 @@ const ChessGame = () => {
     newBoard[selectedMove.from.row][selectedMove.from.col] = null;
 
     setBoard(newBoard);
+    checkForCheck(newBoard);
     setTurn('w');
+  };
+
+  const checkForCheck = (testBoard: Board) => {
+    const whiteKingPos = findKing('w', testBoard);
+    const blackKingPos = findKing('b', testBoard);
+    
+    setIsInCheck({
+      white: whiteKingPos ? isSquareUnderAttack(whiteKingPos, 'b', testBoard) : false,
+      black: blackKingPos ? isSquareUnderAttack(blackKingPos, 'w', testBoard) : false
+    });
   };
 
   useEffect(() => {
@@ -216,6 +290,7 @@ const ChessGame = () => {
         }
 
         setBoard(newBoard);
+        checkForCheck(newBoard);
         setSelectedSquare(null);
         setValidMoves([]);
         setTurn('b');
@@ -243,7 +318,12 @@ const ChessGame = () => {
     setTurn('w');
     setGameOver(false);
     setWinner(null);
+    setIsInCheck({ white: false, black: false });
   };
+
+  useEffect(() => {
+    checkForCheck(board);
+  }, [board]);
 
   return (
     <Card className="p-6 border-2 border-[#E5E7EB]">
@@ -330,6 +410,14 @@ const ChessGame = () => {
               <div className="p-4 bg-white rounded-lg border-2 border-[#10B981] text-center">
                 <p className="text-xl font-bold text-[#10B981] mb-2">
                   {winner === 'white' ? '🎉 Вы победили!' : winner === 'black' ? '😔 AI победил' : '🤝 Ничья'}
+                </p>
+              </div>
+            )}
+            
+            {!gameOver && (isInCheck.white || isInCheck.black) && (
+              <div className="p-4 bg-[#FEE2E2] rounded-lg border-2 border-[#EF4444] text-center">
+                <p className="text-lg font-bold text-[#991B1B]">
+                  ⚠️ ШАХ {isInCheck.white ? 'белым!' : 'чёрным!'}
                 </p>
               </div>
             )}
